@@ -1,0 +1,8 @@
+{
+  "release_version": "portable-v1",
+  "source_analysis": "department_pathway_scan_v1_1",
+  "generated_at": "2026-09-11T07:42:09.135Z",
+  "departments": 19,
+  "copied_runtime_files": 59,
+  "entrypoint": "index.html"
+}
