@@ -143,6 +143,25 @@
   }
   function careerLabelWidth(group) { return Math.min(330, Math.max(190, group.name.length * 14 + 70)); }
 
+  function selectedRelationMode() {
+    return document.querySelector("#relation-select")?.value || "none";
+  }
+  function relationModeLabel(mode = selectedRelationMode()) {
+    if (mode === "all") return "顯示正式＋建議先備";
+    if (mode === "formal") return "只顯示正式／明文先修";
+    return "只顯示主課與能力課";
+  }
+  function stationIdsForRelationMode(group, mode) {
+    const ids = new Set(group.overviewStationIds);
+    if (mode === "all") return [...new Set([...group.fullStationIds, ...ids])];
+    if (mode === "formal") {
+      for (const [stationId, role] of Object.entries(group.stationRoles)) {
+        if (role?.node_type === "prerequisite") ids.add(stationId);
+      }
+    }
+    return [...ids];
+  }
+
   function orderedStationIds(group) {
     const ids = [...group.displayStationIds];
     const idSet = new Set(ids);
@@ -207,8 +226,9 @@
   function calculateLayout() {
     let groups = orderGroups(buildCareerGroups());
     if (activeCareer !== "all") groups = groups.filter((group) => group.id === activeCareer);
+    const relationMode = selectedRelationMode();
     groups.forEach((group) => {
-      group.displayStationIds = activeCareer === "all" ? group.overviewStationIds : group.fullStationIds;
+      group.displayStationIds = stationIdsForRelationMode(group, relationMode);
     });
     const lane = {};
     groups.forEach((group, index) => { lane[group.id] = G.top + index * G.laneGap; });
@@ -252,7 +272,7 @@
     }
     const width = labelX + Math.max(330, ...groups.map(careerLabelWidth)) + G.right;
     const height = Math.max(G.minHeight, maxY + 45);
-    currentLayout = { groups, lane, membership, positions, labels, width, height };
+    currentLayout = { groups, lane, membership, positions, labels, width, height, relationMode };
     return currentLayout;
   }
 
@@ -372,7 +392,7 @@
     const offsets = sharedEdgeOffsets(layout);
     let body = `<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#607381"/></marker><marker id="arrow-warn" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#b65420"/></marker></defs>`;
     body += `<text class="network-heading" x="${G.left}" y="35">課程路網</text><text class="network-note" x="${G.left}" y="56">位置依共用與先備關係安排；站內保留實際學期</text><text class="network-heading" x="${G.left + G.plotWidth + G.labelGap}" y="35">職涯方向</text>`;
-    const relationMode = document.querySelector("#relation-select").value;
+    const relationMode = layout.relationMode;
     if (relationMode !== "none") {
       const edgeMap = new Map();
       for (const group of layout.groups) for (const edge of group.edges) edgeMap.set(`${edge.from_station_id}|${edge.to_station_id}|${edge.relation}`, edge);
@@ -401,11 +421,13 @@
     svg.innerHTML = body;
     bindInteractions(svg);
     const transfers = Object.values(layout.membership).filter((ids) => ids.length > 1).length;
-    const modeText = activeCareer === "all" ? "總覽只顯示主課與能力課" : "已展開完整先備";
+    const modeText = relationModeLabel(layout.relationMode);
     document.querySelector("#map-caption").textContent = `${modeText} · ${layout.groups.length} 條職涯線 · ${Object.keys(layout.membership).length} 個課程／缺口站 · ${transfers} 個共用站`;
-    document.querySelector("#side-summary").textContent = activeCareer === "all"
-      ? "總覽只畫各職涯直接選入的主課與能力課；點一條職涯線，才會展開該路徑全部先備。"
-      : "目前只顯示所選職涯的完整路徑，包含所有正式與建議先備課程。";
+    document.querySelector("#side-summary").textContent = layout.relationMode === "none"
+      ? "目前只畫各職涯直接選入的主課與能力課；可用「先備顯示」加入正式或建議先備。"
+      : layout.relationMode === "formal"
+        ? "目前已加入正式先修、官方課程順序與明文學習先備；不含建議知識先備。"
+        : "目前已加入正式、明文與建議知識先備；虛線箭頭代表建議先備。";
   }
 
   function bindInteractions(svg) {
@@ -433,10 +455,10 @@
     const caption = document.querySelector("#map-caption");
     if (careerId) {
       const group = currentLayout?.groups.find((row) => row.id === careerId);
-      if (group) caption.textContent = `聚焦：${group.name} · 主課 ${group.overviewStationIds.filter((id) => !id.startsWith("gap:")).length} 門；點選可展開含先備完整路徑`;
+      if (group) caption.textContent = `聚焦：${group.name} · 主課 ${group.overviewStationIds.filter((id) => !id.startsWith("gap:")).length} 門；先備範圍由上方選單控制`;
     } else if (currentLayout) {
       const transfers = Object.values(currentLayout.membership).filter((ids) => ids.length > 1).length;
-      const modeText = activeCareer === "all" ? "總覽只顯示主課與能力課" : "已展開完整先備";
+      const modeText = relationModeLabel(currentLayout.relationMode);
       caption.textContent = `${modeText} · ${currentLayout.groups.length} 條職涯線 · ${Object.keys(currentLayout.membership).length} 個課程／缺口站 · ${transfers} 個共用站`;
     }
   }
@@ -461,7 +483,7 @@
   }
   function renderCareerList() {
     const groups = buildCareerGroups();
-    document.querySelector("#detail").innerHTML = `<h3>職涯路徑</h3><div class="overlap-note"><b>如何閱讀</b><br>總覽只顯示直接培養職涯能力的主課；共同停靠就是多條職涯共用課程。點選職涯後，再展開完整先備。</div><div class="jobs">${groups.map((group) => `<button class="job ${activeCareer === group.id ? "active" : ""}" data-career-choice="${group.id}"><b>${esc(group.name)}</b><small>${esc(sourceName(group))} · 主課 ${group.overviewStationIds.filter((id) => !id.startsWith("gap:")).length} 門 · 完整 ${group.fullStationIds.filter((id) => !id.startsWith("gap:")).length} 門</small></button>`).join("") || '<div class="empty">目前篩選條件下沒有職涯路徑。</div>'}</div>`;
+    document.querySelector("#detail").innerHTML = `<h3>職涯路徑</h3><div class="overlap-note"><b>如何閱讀</b><br>共同停靠代表多條職涯共用課程。點選職涯可聚焦單一路徑；是否加入正式與建議先備，請使用上方「先備顯示」。</div><div class="jobs">${groups.map((group) => `<button class="job ${activeCareer === group.id ? "active" : ""}" data-career-choice="${group.id}"><b>${esc(group.name)}</b><small>${esc(sourceName(group))} · 主課 ${group.overviewStationIds.filter((id) => !id.startsWith("gap:")).length} 門 · 完整 ${group.fullStationIds.filter((id) => !id.startsWith("gap:")).length} 門</small></button>`).join("") || '<div class="empty">目前篩選條件下沒有職涯路徑。</div>'}</div>`;
     document.querySelectorAll("[data-career-choice]").forEach((button) => { button.onclick = () => selectCareer(button.dataset.careerChoice, false); });
   }
   function selectCareer(id, showDrawer) {
@@ -524,11 +546,11 @@
     const svgDescription = document.querySelector("#svg-desc");
     if (svgDescription) svgDescription.textContent = "課程位置依共用與先備關係配置；站內學期僅作為實際開課資訊。";
     const legend = document.querySelector(".legend");
-    if (legend) legend.innerHTML = '<span><i class="sample"></i>一色一組職涯路徑</span><span><i class="sample dashed"></i>建議先備箭頭</span><span><i class="station-sample"></i>主課／能力課</span><span><i class="station-sample transfer"></i>多職涯共用課程</span><span>總覽看主課；點職涯線展開全部先備</span>';
+    if (legend) legend.innerHTML = '<span><i class="sample"></i>一色一組職涯路徑</span><span><i class="sample dashed"></i>建議先備箭頭</span><span><i class="station-sample"></i>主課／能力課</span><span><i class="station-sample transfer"></i>多職涯共用課程</span><span>點職涯線聚焦；先備範圍由上方選單控制</span>';
     const relation = document.querySelector("#relation-select");
     if (!relation.querySelector('option[value="none"]')) relation.insertAdjacentHTML("afterbegin", '<option value="none">先隱藏先備線</option>');
     relation.value = "none";
-    relation.onchange = () => draw();
+    relation.onchange = () => { viewBox = null; draw(); };
     document.querySelector("#source-select").onchange = () => { activeCareer = "all"; refreshCareerOptions(); renderCareerList(); viewBox = null; draw(); };
     refreshCareerOptions();
     document.querySelector("#line-select").onchange = (event) => {
@@ -545,6 +567,30 @@
     const reset = document.createElement("button"); reset.id = "reset-node-layout"; reset.type = "button"; reset.textContent = "重設站位";
     reset.onclick = () => { saved = emptyState(); saveLayout(); viewBox = null; draw(); };
     toolbar.insertBefore(reset, fit); fit.textContent = "重設視野";
+
+    const metroTab = document.querySelector("#metro-tab");
+    const timelineTab = document.querySelector("#timeline-tab");
+    const metroView = document.querySelector("#metro-view");
+    const timelineView = document.querySelector("#timeline-view");
+    const switchView = (showMetro) => {
+      metroView.classList.toggle("hidden", !showMetro);
+      timelineView.classList.toggle("active", !showMetro);
+      metroTab.classList.toggle("active", showMetro);
+      timelineTab.classList.toggle("active", !showMetro);
+      metroTab.setAttribute("aria-selected", String(showMetro));
+      timelineTab.setAttribute("aria-selected", String(!showMetro));
+      if (showMetro) draw();
+      else closeDrawer();
+    };
+    metroTab.onclick = () => switchView(true);
+    timelineTab.onclick = () => switchView(false);
+    if (!timelineView.querySelector(".timeline-return-bar")) {
+      const returnBar = document.createElement("div");
+      returnBar.className = "timeline-return-bar";
+      returnBar.innerHTML = '<button type="button" class="timeline-return">← 返回捷運圖</button><span>八學期時間軸保留原版內容；可隨時回到捷運圖。</span>';
+      returnBar.querySelector("button").onclick = () => switchView(true);
+      timelineView.insertBefore(returnBar, timelineView.firstChild);
+    }
   }
   function installStyles() {
     const style = document.createElement("style");
@@ -556,6 +602,7 @@
       .station text{pointer-events:none;paint-order:stroke;stroke:#f8fafb;stroke-width:5px;stroke-linejoin:round}.station .term{fill:#142536;stroke:#fff;stroke-width:3px;font:800 9px Consolas,"Microsoft JhengHei",sans-serif}.station .course-name{fill:#172735;font-size:13px;font-weight:800}.station .course-meta{fill:#637482;font-size:10px;font-weight:600}.station .ability-note{fill:#365d73;font-size:10px;font-weight:700}.station .transfer-note{fill:#8b4f18;font-size:10px;font-weight:800}
       .career-label rect{fill:#fff;stroke-width:3;filter:drop-shadow(0 3px 4px rgba(20,37,54,.13))}.career-label text{pointer-events:none}.career-label .career-name{fill:#172735;font-size:13px;font-weight:800}.career-label .career-meta{fill:#637482;font-size:10px;font-weight:650}
       .career-line,.career-casing,.career-label,.station{transition:opacity .16s ease,filter .16s ease,stroke-width .16s ease}.overview-mode .career-line{stroke-width:2.5;opacity:.24}.overview-mode .career-casing{stroke-width:6;opacity:.5}.overview-mode .career-label{opacity:.82}.hover-muted{opacity:.045!important}.career-line.hover-focus,.overview-mode .career-line.hover-focus{stroke-width:8;opacity:1}.career-casing.hover-focus,.overview-mode .career-casing.hover-focus{stroke-width:14;opacity:1}.career-label.hover-focus,.station.hover-focus{opacity:1;filter:drop-shadow(0 0 6px rgba(20,37,54,.24))}
+      .timeline-return-bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid #d5dfe4;border-bottom:0;background:rgba(248,250,251,.97);box-shadow:0 4px 12px rgba(20,37,54,.08);color:#536b7a;font-size:12px}.timeline-return{border:1px solid #173f5f;border-radius:7px;background:#173f5f;color:#fff;padding:8px 13px;font-weight:800;cursor:pointer}.timeline-return:hover{background:#235b79}
       @media(max-width:900px){.map-toolbar .drag-hint{display:none}}
     `;
     document.head.appendChild(style);
