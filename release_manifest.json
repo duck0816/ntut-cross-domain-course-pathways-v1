@@ -1,8 +1,13 @@
 {
-  "release_version": "portable-v1",
+  "release_version": "v1.1-baseline",
   "source_analysis": "department_pathway_scan_v1_1",
   "generated_at": "2026-09-16T06:37:42.758Z",
+  "documented_at": "2026-09-19",
   "departments": 19,
   "copied_runtime_files": 59,
-  "entrypoint": "index.html"
+  "entrypoint": "index.html",
+  "method_document": "methodology/v1_1_methodology.md",
+  "input_manifest": "methodology/v1_1_input_manifest.json",
+  "release_scope": "static_outputs_and_research_documentation",
+  "warning": "candidate analysis; not an official curriculum or occupational credential"
 }

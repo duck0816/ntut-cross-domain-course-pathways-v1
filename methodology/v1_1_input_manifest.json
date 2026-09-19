@@ -1,0 +1,23 @@
+{
+  "manifest_version": "v1.1-baseline-inputs",
+  "documented_at": "2026-09-19",
+  "hash_algorithm": "sha256",
+  "course_window": "110-1..115-1",
+  "onet_release": "29.3",
+  "inputs": [
+    {"role":"104_market","file":"104_ntut_top10_skills.json","sha256":"ac92a62a3dbabecdcdaf637c752693c1679ffcfcdb1be5e1a6758abfb8a5a2ed"},
+    {"role":"course_master","file":"courses.json","sha256":"95d8d68d58867dfc9f7c7fd16e7af82865d3babf453e25eed1a4fddbf538c561"},
+    {"role":"course_concepts","file":"course_concepts.json","sha256":"b45ffe6013d4465d866a3c740f29a79e01235a6f6f61b0139439a339051446bb"},
+    {"role":"course_relationships","file":"course_relationships.json","sha256":"468ec0759486bc01e76e6f4d0a12baf3f8c454d6cec94b45e38f23b3be585669"},
+    {"role":"method_spec","file":"v1_method_spec.json","sha256":"f3b609480f3ac3fd4feb49ef0ede06200c6a0e9f769ea4cdef62b62294153d53"},
+    {"role":"v1_generator","file":"build_department_market_pathways_v1.py","sha256":"7a63f6c58a39f0040fb183f76cf4e7b3dcea8114ad8dfadbc81e5741b98df11d"},
+    {"role":"department_configs","file":"department_pathway_v1_configs.py","sha256":"551d268a9ec518a25879b2dbdd79b821eb8fd10d854382f964436c6319a00b2d"},
+    {"role":"cip_soc_crosswalk","file":"merged_crosswalk_all_skills.csv","sha256":"caa3c582745e1d8bc4a58d04612ecda55e961ad1ba9d4937e374f5f150cf841e"},
+    {"role":"onet_occupations","file":"Occupation Data.xlsx","sha256":"06a681c5d104eecf28481c8cf4cba0436f6f2cd6472fe796e7d460d7cfa57297"},
+    {"role":"onet_skills","file":"Skills.xlsx","sha256":"b37610db0213ee0c885df1b7cf9022089bcddf4f99bf7322884a6b316845af74"},
+    {"role":"onet_knowledge","file":"Knowledge.xlsx","sha256":"e06145d5847d7d754bcb1ad3cef7be58cba848474c84e9be3d48e24759a61ce3"},
+    {"role":"onet_tasks","file":"Task Ratings.xlsx","sha256":"afd735701238d76875d97b33908cabae3c6e7f68f0fa87956a7f9c58e4beec72"},
+    {"role":"onet_technology","file":"Technology Skills.xlsx","sha256":"ed39ff225e4c17dbaea338e6fe565e477cfaa617b99b15c985640fc9e8e52083"},
+    {"role":"onet_tools","file":"Tools Used.xlsx","sha256":"eaf2cd59e6876da23374eb2c5cfae58e1c181752a85215c8a40705e6b4934445"}
+  ]
+}
